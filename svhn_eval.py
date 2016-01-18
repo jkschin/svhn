@@ -16,11 +16,11 @@
 """Evaluation for CIFAR-10.
 
 Accuracy:
-cifar10_train.py achieves 83.0% accuracy after 100K steps (256 epochs
-of data) as judged by cifar10_eval.py.
+svhn_train.py achieves 83.0% accuracy after 100K steps (256 epochs
+of data) as judged by svhn_eval.py.
 
 Speed:
-On a single Tesla K40, cifar10_train.py processes a single batch of 128 images
+On a single Tesla K40, svhn_train.py processes a single batch of 128 images
 in 0.25-0.35 sec (i.e. 350 - 600 images /sec). The model reaches ~86%
 accuracy after 100K steps in 8 hours of training time.
 
@@ -43,25 +43,115 @@ from tensorflow.python.platform import gfile
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.models.image.cifar10 import cifar10
+import svhn
+import svhn_input
+import os
 
 FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string('eval_dir', '/tmp/cifar10_eval',
+tf.app.flags.DEFINE_integer('batch_size', 29,
+                            """Number of images to process in a batch.""")
+tf.app.flags.DEFINE_string('test_dir', '/home/samuelchin/svhn/data/test',
+                           """Directory where test data is held.""")
+tf.app.flags.DEFINE_string('test_file', 'combined_1_wrong.bin',
+                           """Name of test file.""")
+tf.app.flags.DEFINE_string('eval_dir', '/home/samuelchin/svhn/tmp/svhn_eval',
                            """Directory where to write event logs.""")
 tf.app.flags.DEFINE_string('eval_data', 'test',
                            """Either 'test' or 'train_eval'.""")
-tf.app.flags.DEFINE_string('checkpoint_dir', '/tmp/cifar10_train',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/samuelchin/svhn/tmp/svhn_train',
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_integer('eval_interval_secs', 60 * 5,
                             """How often to run the eval.""")
-tf.app.flags.DEFINE_integer('num_examples', 10000,
+tf.app.flags.DEFINE_integer('num_examples', 29,
                             """Number of examples to run.""")
-tf.app.flags.DEFINE_boolean('run_once', False,
+tf.app.flags.DEFINE_boolean('run_once', True,
                          """Whether to run eval only once.""")
 
+def my_evaluate():
+  with tf.Graph().as_default():
+    # filenames = [os.path.join(FLAGS.test_dir, FLAGS.test_file)]
+    # filename_queue = tf.train.string_input_producer(filenames,num_epochs=1)
+    # read_input = svhn_input.read_cifar10(filename_queue)
+    # reshaped_image = tf.cast(read_input.uint8image, tf.float32)
+    # float_image = tf.image.per_image_whitening(reshaped_image)
+    # images, label_batch = tf.train.batch(
+    #     [float_image, read_input.label],
+    #     batch_size=29,
+    #     num_threads=16,
+    #     capacity=29)
+    # logits = svhn.inference(images)
 
-def eval_once(saver, summary_writer, top_k_op, summary_op):
+    images, labels = svhn.inputs(True)
+
+    # Build a Graph that computes the logits predictions from the
+    # inference model.
+    logits = svhn.inference(images)
+
+    # Calculate predictions.
+    top_k_op = tf.nn.in_top_k(logits, labels, 1)
+
+    variable_averages = tf.train.ExponentialMovingAverage(
+        svhn.MOVING_AVERAGE_DECAY)
+    variables_to_restore = variable_averages.variables_to_restore()
+    saver = tf.train.Saver(variables_to_restore)
+    summary_op = tf.merge_all_summaries()
+    graph_def = tf.get_default_graph().as_graph_def()
+    summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir,
+                                            graph_def=graph_def)
+    with tf.Session() as sess:
+      ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+      if ckpt and ckpt.model_checkpoint_path:
+        # Restores from checkpoint
+        print ("Checkpoint File:",ckpt.model_checkpoint_path)
+        print ("Test Dir:",FLAGS.test_dir)
+        print ("Test File:", FLAGS.test_file)
+        saver.restore(sess, ckpt.model_checkpoint_path)
+        # Assuming model_checkpoint_path looks something like:
+        #   /my-favorite-path/svhn_train/model.ckpt-0,
+        # extract global_step from it.
+        global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
+      else:
+        print('No checkpoint file found')
+        return
+
+
+      print ("INITIALIZED")
+      coord = tf.train.Coordinator()
+      sess.run([logits])
+      coord.request_stop()
+      print ("DONE")
+
+    # # Get images and labels for CIFAR-10.
+    # images, labels = svhn.inputs(True)
+
+    # # Build a Graph that computes the logits predictions from the
+    # # inference model.
+    # logits = svhn.inference(images)
+
+    # # Calculate predictions.
+    # prediction_val_op
+    # top_k_op = tf.nn.in_top_k(logits, labels, 1)
+
+    # # Restore the moving average version of the learned variables for eval.
+    # variable_averages = tf.train.ExponentialMovingAverage(
+    #     svhn.MOVING_AVERAGE_DECAY)
+    # variables_to_restore = variable_averages.variables_to_restore()
+    # saver = tf.train.Saver(variables_to_restore)
+
+    # # Build the summary operation based on the TF collection of Summaries.
+    # summary_op = tf.merge_all_summaries()
+
+    # graph_def = tf.get_default_graph().as_graph_def()
+    # summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir,
+    #                                         graph_def=graph_def)
+
+    # while True:
+    #   eval_once(saver, summary_writer, top_k_op, summary_op)
+    #   if FLAGS.run_once:
+    #     break
+    #   time.sleep(FLAGS.eval_interval_secs)
+
+def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
   """Run Eval once.
 
   Args:
@@ -74,9 +164,12 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
     ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
     if ckpt and ckpt.model_checkpoint_path:
       # Restores from checkpoint
+      print ("Checkpoint File:",ckpt.model_checkpoint_path)
+      print ("Test Dir:",FLAGS.test_dir)
+      print ("Test File:", FLAGS.test_file)
       saver.restore(sess, ckpt.model_checkpoint_path)
       # Assuming model_checkpoint_path looks something like:
-      #   /my-favorite-path/cifar10_train/model.ckpt-0,
+      #   /my-favorite-path/svhn_train/model.ckpt-0,
       # extract global_step from it.
       global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
     else:
@@ -97,15 +190,20 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       step = 0
       while step < num_iter and not coord.should_stop():
         predictions = sess.run([top_k_op])
+        test_labels = sess.run([top_k_predict_op])
+        print (test_labels)
         true_count += np.sum(predictions)
         step += 1
 
       # Compute precision @ 1.
       precision = true_count / total_sample_count
+      print (total_sample_count)
       print('%s: precision @ 1 = %.3f' % (datetime.now(), precision))
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
+      
+      print (summary)
       summary.value.add(tag='Precision @ 1', simple_value=precision)
       summary_writer.add_summary(summary, global_step)
     except Exception as e:  # pylint: disable=broad-except
@@ -119,19 +217,19 @@ def evaluate():
   """Eval CIFAR-10 for a number of steps."""
   with tf.Graph().as_default():
     # Get images and labels for CIFAR-10.
-    eval_data = FLAGS.eval_data == 'test'
-    images, labels = cifar10.inputs(eval_data=eval_data)
+    images, labels = svhn.inputs(True)
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
-    logits = cifar10.inference(images)
+    logits = svhn.inference(images)
 
     # Calculate predictions.
     top_k_op = tf.nn.in_top_k(logits, labels, 1)
+    top_k_predict_op = tf.argmax(logits,1)
 
     # Restore the moving average version of the learned variables for eval.
     variable_averages = tf.train.ExponentialMovingAverage(
-        cifar10.MOVING_AVERAGE_DECAY)
+        svhn.MOVING_AVERAGE_DECAY)
     variables_to_restore = variable_averages.variables_to_restore()
     saver = tf.train.Saver(variables_to_restore)
 
@@ -143,14 +241,13 @@ def evaluate():
                                             graph_def=graph_def)
 
     while True:
-      eval_once(saver, summary_writer, top_k_op, summary_op)
+      eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op)
       if FLAGS.run_once:
         break
       time.sleep(FLAGS.eval_interval_secs)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-  cifar10.maybe_download_and_extract()
   if gfile.Exists(FLAGS.eval_dir):
     gfile.DeleteRecursively(FLAGS.eval_dir)
   gfile.MakeDirs(FLAGS.eval_dir)
