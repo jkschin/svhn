@@ -50,91 +50,6 @@ import svhn_flags
 
 FLAGS = tf.app.flags.FLAGS
 
-
-def my_evaluate():
-  with tf.Graph().as_default():
-    # filenames = [os.path.join(FLAGS.test_dir, FLAGS.test_file)]
-    # filename_queue = tf.train.string_input_producer(filenames,num_epochs=1)
-    # read_input = svhn_input.read_cifar10(filename_queue)
-    # reshaped_image = tf.cast(read_input.uint8image, tf.float32)
-    # float_image = tf.image.per_image_whitening(reshaped_image)
-    # images, label_batch = tf.train.batch(
-    #     [float_image, read_input.label],
-    #     batch_size=29,
-    #     num_threads=16,
-    #     capacity=29)
-    # logits = svhn.inference(images)
-
-    images, labels = svhn.inputs(True)
-
-    # Build a Graph that computes the logits predictions from the
-    # inference model.
-    logits = svhn.inference(images)
-
-    # Calculate predictions.
-    top_k_op = tf.nn.in_top_k(logits, labels, 1)
-
-    variable_averages = tf.train.ExponentialMovingAverage(
-        svhn.MOVING_AVERAGE_DECAY)
-    variables_to_restore = variable_averages.variables_to_restore()
-    saver = tf.train.Saver(variables_to_restore)
-    summary_op = tf.merge_all_summaries()
-    graph_def = tf.get_default_graph().as_graph_def()
-    summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir,
-                                            graph_def=graph_def)
-    with tf.Session() as sess:
-      ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
-      if ckpt and ckpt.model_checkpoint_path:
-        # Restores from checkpoint
-        print ("Checkpoint File:",ckpt.model_checkpoint_path)
-        print ("Test Dir:",FLAGS.test_dir)
-        print ("Test File:", FLAGS.test_file)
-        saver.restore(sess, ckpt.model_checkpoint_path)
-        # Assuming model_checkpoint_path looks something like:
-        #   /my-favorite-path/svhn_train/model.ckpt-0,
-        # extract global_step from it.
-        global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-      else:
-        print('No checkpoint file found')
-        return
-
-
-      print ("INITIALIZED")
-      coord = tf.train.Coordinator()
-      sess.run([logits])
-      coord.request_stop()
-      print ("DONE")
-
-    # # Get images and labels for CIFAR-10.
-    # images, labels = svhn.inputs(True)
-
-    # # Build a Graph that computes the logits predictions from the
-    # # inference model.
-    # logits = svhn.inference(images)
-
-    # # Calculate predictions.
-    # prediction_val_op
-    # top_k_op = tf.nn.in_top_k(logits, labels, 1)
-
-    # # Restore the moving average version of the learned variables for eval.
-    # variable_averages = tf.train.ExponentialMovingAverage(
-    #     svhn.MOVING_AVERAGE_DECAY)
-    # variables_to_restore = variable_averages.variables_to_restore()
-    # saver = tf.train.Saver(variables_to_restore)
-
-    # # Build the summary operation based on the TF collection of Summaries.
-    # summary_op = tf.merge_all_summaries()
-
-    # graph_def = tf.get_default_graph().as_graph_def()
-    # summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir,
-    #                                         graph_def=graph_def)
-
-    # while True:
-    #   eval_once(saver, summary_writer, top_k_op, summary_op)
-    #   if FLAGS.run_once:
-    #     break
-    #   time.sleep(FLAGS.eval_interval_secs)
-
 def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
   """Run Eval once.
 
@@ -199,7 +114,7 @@ def evaluate():
   """Eval CIFAR-10 for a number of steps."""
   with tf.Graph().as_default():
     # Get images and labels for CIFAR-10.
-    images, labels = svhn.inputs(True)
+    images, labels = svhn.inputs()
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
