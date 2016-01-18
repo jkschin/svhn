@@ -15,12 +15,9 @@ import tensorflow as tf
 
 import svhn_input
 from tensorflow.python.platform import gfile
+import svhn_flags
 
 FLAGS = tf.app.flags.FLAGS
-
-# Basic model parameters.
-tf.app.flags.DEFINE_string('data_dir', '/home/samuelchin/svhn/data',
-                           """Path to the CIFAR-10 data directory.""")
 
 # Process images of this size. Note that this differs from the original CIFAR
 # image size of 32 x 32. If one alters this number, then the entire model
