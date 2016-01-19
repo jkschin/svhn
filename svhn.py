@@ -139,8 +139,8 @@ def distorted_inputs():
     images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
     labels: Labels. 1D tensor of [batch_size] size.
   """
-  filenames = [os.path.join(FLAGS.data_dir, 'data_batch_%d.bin' % i) for i in xrange(1, 7)]
-  # filenames = [os.path.join(FLAGS.data_dir,'train_batch.bin')]
+  # filenames = [os.path.join(FLAGS.data_dir, 'data_batch_%d.bin' % i) for i in xrange(1, 7)]
+  filenames = [os.path.join(FLAGS.data_dir,'train_batch.bin')]
   for f in filenames:
     if not gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)

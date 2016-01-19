@@ -112,10 +112,10 @@ def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op, ima
       while step < num_iter and not coord.should_stop():
         predictions = sess.run([top_k_op])
         image, test_labels = sess.run([images,top_k_predict_op])
-        im = Image.fromarray(np.array(image).reshape(32,32,3).astype(np.uint8))
+        # im = Image.fromarray(np.array(image).reshape(50,50,1).astype(np.uint8))
         print (step, int(test_labels[0]))
-        print (FLAGS.predictions_dir + "/" + str(step) + "_" + str(int(test_labels[0])) + ".jpg")
-        im.save("tmp/svhn_results/"+str(step) + "_" + str(int(test_labels[0])) + ".jpg")
+        # print (FLAGS.predictions_dir + "/" + str(step) + "_" + str(int(test_labels[0])) + ".jpg")
+        # im.save("tmp/svhn_results/"+str(step) + "_" + str(int(test_labels[0])) + ".jpg")
         true_count += np.sum(predictions)
         step += 1
 
