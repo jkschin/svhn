@@ -34,7 +34,7 @@ tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.1,
                             """The learning rate decay factor.""")
 tf.app.flags.DEFINE_float('learning_rate',0.1,
                             """Initial learning rate.""")
-tf.app.flags.DEFINE_integer('batch_size', 29,
+tf.app.flags.DEFINE_integer('batch_size', 1,
                             """Number of images to process in a batch.""")
 
 """

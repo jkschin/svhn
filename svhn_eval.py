@@ -52,25 +52,22 @@ FLAGS = tf.app.flags.FLAGS
 
 def inputs():
   filenames = [os.path.join(FLAGS.test_dir, FLAGS.test_file)]
-
   for f in filenames:
     if not gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
-
   filename_queue = tf.train.string_input_producer(filenames,shuffle=False)
   read_input = svhn_input.read_cifar10(filename_queue)
   reshaped_image = tf.cast(read_input.uint8image, tf.float32)
-
   height = FLAGS.image_size
   width = FLAGS.image_size
   float_image = tf.image.per_image_whitening(reshaped_image)
-  num_preprocess_threads = 16
+  num_preprocess_threads = 1
   images, label_batch = tf.train.batch(
       [float_image, read_input.label],
       batch_size=FLAGS.batch_size,
       num_threads=num_preprocess_threads,
       capacity=FLAGS.batch_size)
-  tf.image_summary('images', images, max_images = 30)
+  tf.image_summary('images', images, max_images = 29)
   return images, tf.reshape(label_batch, [FLAGS.batch_size])
 
 def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
@@ -107,13 +104,14 @@ def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
                                          start=True))
 
       num_iter = int(math.ceil(FLAGS.num_examples / FLAGS.batch_size))
+      print (num_iter)
       true_count = 0  # Counts the number of correct predictions.
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
       while step < num_iter and not coord.should_stop():
         predictions = sess.run([top_k_op])
         test_labels = sess.run([top_k_predict_op])
-        print (test_labels)
+        print (step, test_labels)
         true_count += np.sum(predictions)
         step += 1
 
