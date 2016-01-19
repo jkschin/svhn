@@ -140,6 +140,7 @@ def distorted_inputs():
     labels: Labels. 1D tensor of [batch_size] size.
   """
   filenames = [os.path.join(FLAGS.data_dir, 'data_batch_%d.bin' % i) for i in xrange(1, 7)]
+  # filenames = [os.path.join(FLAGS.data_dir,'train_batch.bin')]
   for f in filenames:
     if not gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
@@ -191,7 +192,7 @@ def inference(images):
   #
   # conv1
   with tf.variable_scope('conv1') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[5, 5, 3, 64],
+    kernel = _variable_with_weight_decay('weights', shape=[5, 5, FLAGS.num_channels, 64],
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))

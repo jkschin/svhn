@@ -12,11 +12,12 @@ tf.app.flags.DEFINE_string('test_dir', os.path.join(base_dir,'svhn/data/test'),
 tf.app.flags.DEFINE_string('checkpoint_dir', os.path.join(base_dir,'svhn/tmp/svhn_train'),
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_string('data_dir', os.path.join(base_dir,'svhn/data/train'),
-              """Path to the SVHN data directory.""")
+                            """Path to the SVHN data directory.""")
 tf.app.flags.DEFINE_string('train_dir', os.path.join(base_dir,'svhn/tmp/svhn_train_mask'),
                            """Directory where to write event logs """
                            """and checkpoint.""")
-
+tf.app.flags.DEFINE_string('predictions_dir', os.path.join(base_dir,'svhn/tmp/svhn_results'),
+                            """Directory where results will be written""")
 """
 Training Parameters
 """
@@ -34,12 +35,15 @@ tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.1,
                             """The learning rate decay factor.""")
 tf.app.flags.DEFINE_float('learning_rate',0.1,
                             """Initial learning rate.""")
-tf.app.flags.DEFINE_integer('batch_size', 1,
+tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
+tf.app.flags.DEFINE_integer('num_channels', 3,
+                            """Number of channels""")
 
 """
 Test Parameters
 """
+#Remember to change the batch.
 tf.app.flags.DEFINE_string('test_file', 'combined_1_wrong.bin',
                            """Name of test file.""")
 tf.app.flags.DEFINE_string('eval_data', 'test',

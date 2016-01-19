@@ -47,6 +47,7 @@ import svhn
 import svhn_input
 import os
 import svhn_flags
+from PIL import Image
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -70,7 +71,7 @@ def inputs():
   tf.image_summary('images', images, max_images = 29)
   return images, tf.reshape(label_batch, [FLAGS.batch_size])
 
-def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
+def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op, images):
   """Run Eval once.
 
   Args:
@@ -110,8 +111,11 @@ def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
       step = 0
       while step < num_iter and not coord.should_stop():
         predictions = sess.run([top_k_op])
-        test_labels = sess.run([top_k_predict_op])
-        print (step, test_labels)
+        image, test_labels = sess.run([images,top_k_predict_op])
+        im = Image.fromarray(np.array(image).reshape(32,32,3).astype(np.uint8))
+        print (step, int(test_labels[0]))
+        print (FLAGS.predictions_dir + "/" + str(step) + "_" + str(int(test_labels[0])) + ".jpg")
+        im.save("tmp/svhn_results/"+str(step) + "_" + str(int(test_labels[0])) + ".jpg")
         true_count += np.sum(predictions)
         step += 1
 
@@ -159,14 +163,17 @@ def evaluate():
                                             graph_def=graph_def)
 
     while True:
-      eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op)
+      eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op, images)
       break
 
 
 def main(argv=None):  # pylint: disable=unused-argument
   if gfile.Exists(FLAGS.eval_dir):
     gfile.DeleteRecursively(FLAGS.eval_dir)
+  if gfile.Exists(FLAGS.predictions_dir):
+    gfile.DeleteRecursively(FLAGS.predictions_dir)
   gfile.MakeDirs(FLAGS.eval_dir)
+  gfile.MakeDirs(FLAGS.predictions_dir)
   evaluate()
 
 
