@@ -50,6 +50,29 @@ import svhn_flags
 
 FLAGS = tf.app.flags.FLAGS
 
+def inputs():
+  filenames = [os.path.join(FLAGS.test_dir, FLAGS.test_file)]
+
+  for f in filenames:
+    if not gfile.Exists(f):
+      raise ValueError('Failed to find file: ' + f)
+
+  filename_queue = tf.train.string_input_producer(filenames,shuffle=False)
+  read_input = svhn_input.read_cifar10(filename_queue)
+  reshaped_image = tf.cast(read_input.uint8image, tf.float32)
+
+  height = FLAGS.image_size
+  width = FLAGS.image_size
+  float_image = tf.image.per_image_whitening(reshaped_image)
+  num_preprocess_threads = 16
+  images, label_batch = tf.train.batch(
+      [float_image, read_input.label],
+      batch_size=FLAGS.batch_size,
+      num_threads=num_preprocess_threads,
+      capacity=FLAGS.batch_size)
+  tf.image_summary('images', images, max_images = 30)
+  return images, tf.reshape(label_batch, [FLAGS.batch_size])
+
 def eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op):
   """Run Eval once.
 
@@ -114,7 +137,7 @@ def evaluate():
   """Eval CIFAR-10 for a number of steps."""
   with tf.Graph().as_default():
     # Get images and labels for CIFAR-10.
-    images, labels = svhn.inputs()
+    images, labels = inputs()
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
@@ -139,9 +162,7 @@ def evaluate():
 
     while True:
       eval_once(saver, summary_writer, top_k_op, top_k_predict_op, summary_op)
-      if FLAGS.run_once:
-        break
-      time.sleep(FLAGS.eval_interval_secs)
+      break
 
 
 def main(argv=None):  # pylint: disable=unused-argument
