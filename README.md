@@ -8,6 +8,7 @@ Notable Improvements
 1. Refactored all flags to be put in python flags file.
 2. Made a small hack to evaluate the test set sequentially (we lose out on speed greatly). This way, we can single out those images that have been classified wrongly. Still imperfect and a work in progress.
 3. Previous CIFAR10 evaluation code runs the test set in batches. In my opinion, this is unnecessary. We only want to run every image in the test set once.
+4. Refactored code to allow for 3 channel and 1 channel images.
 
 Successful Runs:
 
@@ -17,3 +18,4 @@ Successful Runs:
   * 100% accuracy too, but the data set creation is off.
 3. Assortment of others that yield promising results.
 
+P.S. I apologize for messy code. This is experimental. Trying to hack stuff together to make it work. Expect a refactored general purpose module soon! 
